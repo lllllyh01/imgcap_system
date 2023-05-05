@@ -4,6 +4,8 @@
 system_frontend3
 ./model_vscode/checkpoint
 ./model_vscode/__pycache__
+./model_vscode/iu_10fold
+./model_vscode/peir_10fold
 node_modules
 
 
