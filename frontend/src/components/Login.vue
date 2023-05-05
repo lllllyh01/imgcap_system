@@ -53,7 +53,7 @@ export default {
   methods: {
     login () {
       if(this.loginForm.userName === "lyh" && this.loginForm.password === "123") {
-        this.$router.push("/")
+        this.$router.push("/menu")
       } else {
         this.$message.error("用户名或密码错误");
       }
