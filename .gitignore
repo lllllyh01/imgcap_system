@@ -1,11 +1,17 @@
 *.DS_Store
-./frontend/node_modules
+frontend/node_modules
 /dist
 system_frontend3
-./model_vscode/checkpoint
-./model_vscode/__pycache__
-./model_vscode/iu_10fold
-./model_vscode/peir_10fold
+model_vscode/checkpoint
+model_vscode/__pycache__
+model_vscode/iu_10fold
+model_vscode/peir_10fold
+model_vscode/*.txt
+model_vscode/*.png
+model_vscode/*.jpg
+model_vscode/raw.py
+model_vscode/test.py
+model_vscode/1
 node_modules
 
 
