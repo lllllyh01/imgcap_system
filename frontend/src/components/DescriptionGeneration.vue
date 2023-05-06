@@ -1,5 +1,5 @@
 <template>
-    <h1>欢迎，lyh！</h1>
+  <Menu></Menu>
     <el-upload
     class="upload_img"
     :show-file-list="false"
@@ -13,7 +13,7 @@
       拖动图片至此 或 <em>点击上传图片</em>
     </div>
     <template #tip>
-      <div class="el-upload__tip">
+      <div class="el-upload__tip" style="font-size: 15px;">
         请上传JPG或PNG格式图片
       </div>
     </template>
@@ -30,11 +30,14 @@
   import { ElMessage } from 'element-plus'
   // eslint-disable-next-line no-unused-vars
   import { UploadFilled } from '@element-plus/icons-vue'
+  // eslint-disable-next-line no-unused-vars
+  import Menu from './Menu'
   export default {
     name: 'DescriptionGeneration',
     data () {
       return {
         imageUrl: ref(''),
+        description: "描述内容"
       }
     },
     methods: {
@@ -64,10 +67,11 @@
 </script>
 <style>
   .upload_img .el-upload {
-    border: 1px dashed #d9d9d9;
+    border: 1px dashed gainsboro;
     width: 500px;
     height: 200px;
     border-radius: 6px;
+    margin-top: 30px;
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -82,13 +86,14 @@
     text-align: center;
   }
   .el-upload__text {
-    font-size: 13px;
+    font-size: 17px;
   }
   .gen_button {
-    margin-top: 10px;
+    margin-top: 15px;
   }
   .des_box {
     width: 500px;
     margin-top: 20px;
+    font-size: 18px;
   }
 </style>

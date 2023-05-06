@@ -1,48 +1,37 @@
 <template>
   <div class="menu">
-      <el-col :span="4" class="col">
-        <el-menu :default-active="defaultActive" class="el-menu-vertical-demo"
-        text-color="#bfcbd9"
-        background-color="#324057"
-        router
-        unique-opened
-        >
-          <el-menu-item index="/description_generation">
-            <i class="el-icon-s-management"></i>报告生成
-          </el-menu-item>
-          <el-menu-item index="/person">
-            <i class="el-icon-reading"></i>个人信息
-          </el-menu-item>
-            <!-- <el-submenu index="/project">
-                <template slot="title"><i class="el-icon-reading"></i>项目</template>
-                <el-menu-item index="/back_ground">研究背景</el-menu-item>
-                <el-menu-item index="/research_content">研究内容</el-menu-item>
-                <el-menu-item index="/technology">技术路线</el-menu-item>
-                <el-menu-item index="/goal">目标与成果</el-menu-item>
-            </el-submenu> -->
-          <el-menu-item index="/history">
-            <i class="el-icon-document"></i>历史记录
-          </el-menu-item>
-        </el-menu>
-      </el-col>
-
-      <el-col :span="20" class="content" style="margin-left: 16.5%; height: 100%;overflow: auto;width:84%; margin-right: 0%">
-        <el-row>
-          <el-page-header @back="back">
-            <template #content>
-              <span class="welcome_title">欢迎，lyh！</span>
-            </template>
-            <template #extra>
-              <el-button>退出登录</el-button>
-            </template>
-          </el-page-header>
-        </el-row>
-        <el-scrollbar>
-          <keep-alive>
-            <router-view></router-view>
-          </keep-alive>
-        </el-scrollbar>
-      </el-col>
+    <el-row style="background-color: #304156; height: 60px;">
+      <div style="height: 60px; line-height: 60px; margin-left: 30px; margin-right: 100px; color: #f4f4f5;">
+        <span style="font-size: 30px; font-weight: bolder; margin-right: 20px;">图像描述生成系统</span>
+        <span style="font-size: 20px;">欢迎，lyh！</span>
+      </div>
+      <el-menu :default-active="activeIndex"
+      mode="horizontal"
+      text-color="#f4f4f5"
+      active-text-color="#409EFF"
+      background-color="#304156"
+      style="margin-right: 240px; height: 60px;"
+      router
+      unique-opened>
+        <el-menu-item index="/description_generation">
+          <i class="el-icon-s-management"></i>报告生成
+        </el-menu-item>
+        <el-menu-item index="/person">
+          <i class="el-icon-reading"></i>个人信息
+        </el-menu-item>
+        <el-menu-item index="/history">
+          <i class="el-icon-document"></i>历史记录
+        </el-menu-item>
+      </el-menu>
+      <div style="height: 60px; line-height: 60px; margin: auto; margin-left: 240px; margin-right: 10px;">
+        <el-button style="margin: auto;">退出登录</el-button>
+      </div>
+    </el-row>
+    <el-scrollbar>
+      <keep-alive>
+        <router-view></router-view>
+      </keep-alive>
+    </el-scrollbar>
   </div>
 </template>
 
@@ -64,6 +53,9 @@
 <style>
   .menu {
     height: 100%;
+  }
+  .el-menu--horizontal .el-menu .el-menu-item {
+    font-size: 25px;
   }
   .col {
     background-color: #324057;
