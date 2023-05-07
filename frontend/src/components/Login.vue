@@ -68,7 +68,7 @@ export default {
       }
     },
     goRegister () {
-      console.log("in goRegister")
+      this.$router.push("/register")
     }
     // clkicLogin () {
     //   const that = this
