@@ -5,7 +5,7 @@
     <el-table-column label="时间" width="300">
       <template #default="scope">
         <div style="display: flex; align-items: center">
-          <el-icon><timer /></el-icon>
+          <i class="el-icon-timer"></i>
           <span style="margin-left: 10px; font-size: 20px;">{{ scope.row.date }}</span>
         </div>
       </template>
@@ -31,8 +31,6 @@
 </template>
 
 <script>
-  // eslint-disable-next-line no-unused-vars
-  import { Timer } from '@element-plus/icons-vue'
   export default {
     name: 'History',
     data () {
