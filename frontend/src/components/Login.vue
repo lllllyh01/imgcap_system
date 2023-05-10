@@ -62,9 +62,10 @@ export default {
   methods: {
     login () {
       if(this.loginForm.userName === "lyh" && this.loginForm.password === "123") {
-        this.$router.push("/menu")
-      } else {
-        this.$message.error("用户名或密码错误")
+        this.$message.success("登录成功！")
+        this.$router.push("/description_generation")
+      } else if (this.loginForm.userName === "lyh1") {
+        this.$message.error("用户不存在")
       }
     },
     goRegister () {

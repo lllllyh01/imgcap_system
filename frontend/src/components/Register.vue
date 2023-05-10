@@ -11,7 +11,7 @@
           <el-input class="input_box" type="password" v-model="registerForm.passwd" />
         </el-form-item>
         <el-form-item prop="confirm_passwd" type="password" label="确认密码">
-          <el-input class="input_box" v-model="registerForm.confirm_passwd" />
+          <el-input class="input_box" type="password" v-model="registerForm.confirm_passwd" />
         </el-form-item>
         <el-form-item label="真实姓名">
           <el-input class="input_box" v-model="registerForm.real_name" />
@@ -86,7 +86,8 @@ export default {
           {
               required: false,
               type: 'number',
-              message: "年龄必须是数值"
+              message: "年龄必须是数值",
+              transform(value) { return Number(value) }
           }
         ]
       }
@@ -94,7 +95,12 @@ export default {
   },
   methods: {
     register () {
-      this.$router.push("/login")
+      if (this.registerForm.userName === "lyh" && this.registerForm.passwd === "123") {
+        this.$message.success("注册成功")
+        this.$router.push("/login")
+      } else if (this.registerForm.userName === "lyh" && this.registerForm.passwd === "456") {
+        this.$message.error("用户已存在")
+      }
     },
     goLogin () {
       this.$router.push("/login")

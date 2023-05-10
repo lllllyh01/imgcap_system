@@ -1,32 +1,41 @@
 <template>
   <Menu></Menu>
-    <el-upload
-    class="upload_img"
-    :show-file-list="false"
-    :on-success="handleImgSuccess"
-    action="https://jsonplaceholder.typicode.com/posts/"
-    :before-upload="beforeUpload"
-    multiple
-  >
-    <el-icon class="el-icon__upload"><upload-filled /></el-icon>
-    <div class="el-upload__text">
-      拖动图片至此 或 <em>点击上传图片</em>
-    </div>
-    <template #tip>
-      <div class="el-upload__tip" style="font-size: 15px;">
-        请上传JPG或PNG格式图片
+  <el-row>
+    <el-col :span="10">
+      <el-upload
+      class="upload_img"
+      accept="image/jpeg,image/png"
+      :show-file-list="false"
+      :on-success="handleImgSuccess"
+      action=""
+      :before-upload="beforeUpload"
+      multiple
+    >
+        <img class="img" v-if="imageUrl" :src="imageUrl">
+        <el-icon v-else class="el-icon__upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">
+          拖动图片至此 或 <em>点击上传图片</em>
+        </div>
+        <template #tip>
+          <div class="el-upload__tip" style="font-size: 15px;">
+            请上传JPG或PNG格式图片
+          </div>
+        </template>
+      </el-upload>
+    </el-col>
+    <el-col :span="4">
+      <el-button class="gen_button" @click="generate()" :disabled="imageUrl === '' ? true : false">生成报告</el-button>
+    </el-col>
+    <el-col :span="10">
+      <div class="des_box">
+        <!-- <el-input class="des_box" type="textarea" :rows="8" placeholder="描述内容" v-model="description"/> -->
+        <span style="">{{ description }}</span>
       </div>
-    </template>
-  </el-upload>
-  <img v-if="imageUrl" :src="imageUrl" />
-  <el-button class="gen_button" @click="generate()" disabled="imageUrl">生成描述</el-button>
-  <div>
-    <el-input class="des_box" type="textarea" :rows="8" placeholder="描述内容" v-model="description"/>
-  </div>
+    </el-col>
+  </el-row>
 </template>
 
 <script>
-  import { ref } from 'vue'
   import { ElMessage } from 'element-plus'
   // eslint-disable-next-line no-unused-vars
   import { UploadFilled } from '@element-plus/icons-vue'
@@ -36,8 +45,8 @@
     name: 'DescriptionGeneration',
     data () {
       return {
-        imageUrl: ref(''),
-        description: "描述内容"
+        imageUrl: '',
+        description: ''
       }
     },
     methods: {
@@ -57,7 +66,9 @@
         if (!isJPGPNG) {
           ElMessage.error('请上传JPG或PNG格式图片')
         }
-        return isJPGPNG
+        // return isJPGPNG
+        this.imageUrl = URL.createObjectURL(file);
+        return false
       },
       generate() {
         console.log("in generate function")
@@ -68,8 +79,8 @@
 <style>
   .upload_img .el-upload {
     border: 1px dashed gainsboro;
-    width: 500px;
-    height: 200px;
+    width: 300px;
+    height: 400px;
     border-radius: 6px;
     margin-top: 30px;
     cursor: pointer;
@@ -79,6 +90,10 @@
   .upload_img .el-upload:hover {
     border-color: #409eff;
   }
+  .img {
+    width: auto;
+    height: 400px;
+  }
   .el-icon__upload {
     font-size: 100px;
     margin-top: 40px;
@@ -87,13 +102,26 @@
   }
   .el-upload__text {
     font-size: 17px;
+    margin-bottom: 10px;
   }
   .gen_button {
-    margin-top: 15px;
+    margin-top: 49%;
+    font-size: 20px;
   }
   .des_box {
-    width: 500px;
+    height: 400px;
+    width: 300px;
     margin-top: 20px;
+    margin-left: auto;
+    margin-right: auto;
     font-size: 18px;
+    border: solid;
+    border-radius: 5px;
+    border-color: grey;
+    border-width: 1px;
+    text-align: left;
+    padding: 20px 20px;
+    display: flex;
+    align-items: center;
   }
 </style>
