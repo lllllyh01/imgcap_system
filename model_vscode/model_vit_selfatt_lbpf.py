@@ -244,7 +244,7 @@ class Attention(nn.Module):
         # print("shape of decoder_hidden:", decoder_hidden.shape) # (1, batch_size_t, decoder_dim)
         # print("shape of tag_embedding:", tag_embedding.shape) # (batch_size_t,max_tag_length(10),embed_dim)
 
-        att_output_i, heads_weight_i = self.multihead_att(w_q, w_ki, w_vi, need_weights=False) # need_weights指示是否需要attn_output_weight，不是multi head的weight
+        att_output_i, heads_weight_single_i, heads_weight_i, penalty_i = self.multihead_att(w_q, w_ki, w_vi, need_weights=False) # need_weights指示是否需要attn_output_weight，不是multi head的weight
         ## att_output_t, _, heads_weight_t = self.multihead_att(w_q, w_kt, w_vt)
         att_output_i = torch.squeeze(att_output_i, dim = 0) # (batch_size_t, attention_dim)
         ## att_output_t = torch.squeeze(att_output_t, dim = 0) # (batch_size_t, attention_dim)
@@ -258,7 +258,7 @@ class Attention(nn.Module):
         ctx = self.fc(att_output_i)
         # print("shape of ctx:", ctx.shape)
         # ctx1 = self.fc2(ctx.permute(1, 2, 0)).squeeze(2) # (batch_size_t, attention_dim)
-        return ctx, heads_weight_i
+        return ctx, heads_weight_single_i, heads_weight_i, penalty_i
 
 
 class DecoderWithAttention(nn.Module):
@@ -444,7 +444,7 @@ class DecoderWithAttention(nn.Module):
         # then generate a new word in the decoder with the previous word and the attention weighted encoding
         for t in range(max(decode_lengths)):
             batch_size_t = sum([l > t for l in decode_lengths])
-            ctx, _=self.attention(encoder_out[:batch_size_t],h1[:batch_size_t])
+            ctx, _, _, _=self.attention(encoder_out[:batch_size_t],h1[:batch_size_t])
             h1,c1=self.sent_lstm(torch.cat([ctx,h1[:batch_size_t]],dim=1),(h1[:batch_size_t],c1[:batch_size_t]))
             # print(ctx.shape)
             # print(embeddings.shape)
@@ -456,7 +456,7 @@ class DecoderWithAttention(nn.Module):
             preds = self.fc(h2)  # (batch_size_t, vocab_size)
             predictions[:batch_size_t, t, :] = preds
 
-            ctx2, heads_weight_i=self.attention(encoder_out[:batch_size_t],h2[:batch_size_t])
+            ctx2, heads_weight_single_i, heads_weight_i, penalty_i=self.attention(encoder_out[:batch_size_t],h2[:batch_size_t])
             
             h3,c3=self.decode_step2(torch.cat([embeddings[:batch_size_t,t,:],ctx2[:batch_size_t],h2[:batch_size_t]], dim=1),
                 (h2[:batch_size_t], c2[:batch_size_t]))
@@ -475,4 +475,4 @@ class DecoderWithAttention(nn.Module):
             tag_pred_out = self.softmax(self.tag_pred_linear(tag_pred_out))
             # print("tag_pred_out shape:", tag_pred_out.shape)
 
-        return predictions,predictions2, encoded_captions, decode_lengths, alphas, sort_ind, tag_pred_out, heads_weight_i
+        return predictions,predictions2, encoded_captions, decode_lengths, alphas, sort_ind, tag_pred_out, heads_weight_single_i, heads_weight_i, penalty_i

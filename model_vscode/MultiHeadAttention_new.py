@@ -174,7 +174,7 @@ class MultiheadAttention_(Module):
                 key_padding_mask=key_padding_mask, need_weights=need_weights,
                 attn_mask=attn_mask, use_separate_proj_weight=True,
                 q_proj_weight=self.q_proj_weight, k_proj_weight=self.k_proj_weight,
-                v_proj_weight=self.v_proj_weight, heads_weight=self.heads_weight, 
+                v_proj_weight=self.v_proj_weight, heads_weight=self.heads_weight,
                 need_heads_weight=self.need_heads_weight)
         else:
             if self.heads_weight is not None:
@@ -471,6 +471,7 @@ def multi_head_attention_forward_(query,                          # type: Tensor
 
     attn_output = torch.bmm(attn_output_weights, v)
     assert list(attn_output.size()) == [bsz * num_heads, tgt_len, head_dim]
+    heads_weight_single_list = []
     if heads_weight is not None:
         attn_output = attn_output.reshape(bsz * num_heads, -1)
 
@@ -490,6 +491,7 @@ def multi_head_attention_forward_(query,                          # type: Tensor
                 # print("heads_weight*(2-penalty):", heads_weight * (2.0-penalty))
                 # print("heads weight after softmax:", nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
                 # input("Please press enter to procesed")
+                heads_weight_single_list.append(heads_weight)
                 heads_weight_list.append(nn.functional.softmax(heads_weight*(2.0-penalty))*num_heads)
             
             ##penalty /= num_heads
@@ -497,6 +499,12 @@ def multi_head_attention_forward_(query,                          # type: Tensor
             # penalty = penalty.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             ##heads_weight_tmp = heads_weight * (2.0-penalty)
             heads_weight = torch.cat(tuple(heads_weight_list), dim=0).reshape(-1, 1)
+            # print("heads_weight:", heads_weight, ", shape:", heads_weight.shape)
+            
+            heads_weight[cos_base,0] *= 1.75 # amplify base head weight in testing
+
+            # print("heads_weight after amplify:", heads_weight)
+            heads_weight_single = torch.cat(tuple(heads_weight_single_list), dim=0).reshape(-1, 1)
         ##########Code for Penalty##########
 
         if need_heads_weight == 1:
@@ -518,11 +526,17 @@ def multi_head_attention_forward_(query,                          # type: Tensor
         # average attention weights over heads
         attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
         if heads_weight is not None:
-            return attn_output, attn_output_weights.sum(dim=1) / num_heads, heads_weight[:num_heads].reshape(-1)
+            if heads_weight_single is not None:
+                return attn_output, attn_output_weights.sum(dim=1) / num_heads, heads_weight_single[:num_heads].reshape(-1), heads_weight[:num_heads].reshape(-1), penalty
+            else:
+                return attn_output, attn_output_weights.sum(dim=1) / num_heads, None, heads_weight[:num_heads].reshape(-1), None
         else:
-            return attn_output, attn_output_weights.sum(dim=1) / num_heads, None
+            return attn_output, attn_output_weights.sum(dim=1) / num_heads, None, None, None
     else:
         if heads_weight is not None:
-            return attn_output, heads_weight[:num_heads].reshape(-1)
+            if heads_weight_single is not None:
+                return attn_output, heads_weight_single[:num_heads].reshape(-1), heads_weight[:num_heads].reshape(-1), penalty
+            else:
+                return attn_output, None, heads_weight[:num_heads].reshape(-1), None
         else:
-            return attn_output, None
+            return attn_output, None, None, None

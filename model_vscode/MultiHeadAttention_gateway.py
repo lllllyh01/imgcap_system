@@ -1,3 +1,6 @@
+# This file add need_heads_weight coefficient comparing to MultiHeadAttention_.py. need_heads_weight helps to control whether to use DWMHA conveniently: 0 represents no weight on multi-head attention, 1 represents single weight, 2 represents double weights.
+# Some early training checkpoints didn't use this coefficient, so they will throw exception if evaluting them with this file. Please use MultiHeadAttention_.py instead.
+
 import imp
 import warnings
 from typing import Tuple, Optional
@@ -49,7 +52,7 @@ class MultiheadAttention_(Module):
         'bias_v': torch._jit_internal.Optional[torch.Tensor],
     }
 
-    def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None):
+    def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, need_heads_weight=0, add_zero_attn=False, kdim=None, vdim=None):
         super(MultiheadAttention_, self).__init__()
         self.embed_dim = embed_dim
         self.kdim = kdim if kdim is not None else embed_dim
@@ -85,9 +88,13 @@ class MultiheadAttention_(Module):
             self.bias_k = self.bias_v = None
 
         self.add_zero_attn = add_zero_attn
+        self.need_heads_weight = need_heads_weight
 
-        self.heads_weight = Parameter(torch.ones(num_heads))
-        self.softmax = Softmax(dim=0)
+        if need_heads_weight != 0:
+            self.heads_weight = Parameter(torch.ones(num_heads))
+            self.softmax = Softmax(dim=0)
+        else:
+            self.heads_weight = None
 
         self._reset_parameters()
 
@@ -169,7 +176,8 @@ class MultiheadAttention_(Module):
                 key_padding_mask=key_padding_mask, need_weights=need_weights,
                 attn_mask=attn_mask, use_separate_proj_weight=True,
                 q_proj_weight=self.q_proj_weight, k_proj_weight=self.k_proj_weight,
-                v_proj_weight=self.v_proj_weight, heads_weight=self.heads_weight)
+                v_proj_weight=self.v_proj_weight, heads_weight=self.heads_weight,
+                need_heads_weight=self.need_heads_weight)
         else:
             if self.heads_weight is not None:
                 self.heads_weight.data = self.softmax(self.heads_weight)*self.num_heads
@@ -181,7 +189,8 @@ class MultiheadAttention_(Module):
                 self.dropout, self.out_proj.weight, self.out_proj.bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask, need_weights=need_weights,
-                attn_mask=attn_mask, heads_weight=self.heads_weight)
+                attn_mask=attn_mask, heads_weight=self.heads_weight,
+                need_heads_weight=self.need_heads_weight)
 
 
 def multi_head_attention_forward_(query,                          # type: Tensor
@@ -207,7 +216,8 @@ def multi_head_attention_forward_(query,                          # type: Tensor
                                  v_proj_weight=None,              # type: Optional[Tensor]
                                  static_k=None,                   # type: Optional[Tensor]
                                  static_v=None,                   # type: Optional[Tensor]
-                                 heads_weight=None                # type: Optional[Tensor]
+                                 heads_weight=None,               # type: Optional[Tensor]
+                                 need_heads_weight=0              # type: Optional[int]
                                  ):
     # type: (...) -> Tuple[Tensor, Optional[Tensor]]
     r"""
@@ -469,33 +479,34 @@ def multi_head_attention_forward_(query,                          # type: Tensor
 
         ##########Code for Penalty##########
         # print("need heads weight:", need_heads_weight)
+        if need_heads_weight == 2:
         # if heads_weight is not None:
         ##heads_weight_list = []
-        penalty = torch.zeros(num_heads).to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-        cos_base = heads_weight.argmax().item()
-        # print(cos_base.item())
-        # attn_output: (bsz(batch_size), num_heads, att_dim)
-        for i in range(bsz):
-            # print(i, len(penalty), len(attn_output), i//num_heads*num_heads + cos_base)
-            attn_output_slid = attn_output[i*num_heads:(i+1)*num_heads]
-            # print("attn_output_slid shape:", attn_output_slid.size())
-            penalty += torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
-            # print("cos_similarity: ", torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid))
-            ##penalty = torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
+            penalty = torch.zeros(num_heads).to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+            cos_base = heads_weight.argmax().item()
+            # print(cos_base.item())
+            # attn_output: (bsz(batch_size), num_heads, att_dim)
+            for i in range(bsz):
+                # print(i, len(penalty), len(attn_output), i//num_heads*num_heads + cos_base)
+                attn_output_slid = attn_output[i*num_heads:(i+1)*num_heads]
+                # print("attn_output_slid shape:", attn_output_slid.size())
+                penalty += torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
+                # print("cos_similarity: ", torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid))
+                ##penalty = torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
+                # print("penalty:", penalty)
+                # print("heads_weight*(2-penalty):", heads_weight * (2.0-penalty))
+                # print("heads weight after softmax:", nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
+                # input("Please press enter to proceed")
+                ##heads_weight_list.append(nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
+            
+            # print("bsz:", bsz, ", penalty:", penalty)
+            penalty /= num_heads
             # print("penalty:", penalty)
-            # print("heads_weight*(2-penalty):", heads_weight * (2.0-penalty))
-            # print("heads weight after softmax:", nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
-            # input("Please press enter to proceed")
-            ##heads_weight_list.append(nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
-        
-        # print("bsz:", bsz, ", penalty:", penalty)
-        penalty /= num_heads
-        # print("penalty:", penalty)
-        # penalty = penalty.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-        heads_weight_single = heads_weight[:]
-        # print("heads_weight_single in MultiHeadAttention_: ", heads_weight_single)
-        heads_weight = heads_weight * (2.0-penalty)
-        # print("heads_weight in MultiHeadAttention_: ", heads_weight)
+            # penalty = penalty.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+            heads_weight_single = heads_weight[:]
+            # print("heads_weight_single in MultiHeadAttention_: ", heads_weight_single)
+            heads_weight = heads_weight * (2.0-penalty)
+            # print("heads_weight in MultiHeadAttention_: ", heads_weight)
         ##heads_weight = torch.cat(tuple(heads_weight_list), dim=0).reshape(-1, 1)
         ##########Code for Penalty##########
 
@@ -505,6 +516,10 @@ def multi_head_attention_forward_(query,                          # type: Tensor
         attn_output = torch.mul(attn_output, heads_weight)
         attn_output = attn_output.reshape(bsz * num_heads, tgt_len, -1)
         assert attn_output.size(2) == head_dim
+        ##heads_weight_pre = heads_weight
+
+        ##if need_heads_weight == 2:
+        ##    heads_weight = heads_weight_tmp.reshape(-1, 1).repeat(bsz, 1)
 
     attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
     attn_output = F.linear(attn_output, out_proj_weight, out_proj_bias)

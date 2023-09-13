@@ -2,6 +2,7 @@
 # from cv2 import floodFill
 # from sklearn import metrics
 # from torch import long
+import sys
 import torch.backends.cudnn as cudnn
 import torch.optim
 # from torch.utils import data
@@ -13,7 +14,7 @@ from new_utils import *
 # from nltk.translate.bleu_score import corpus_bleu
 # import torch.nn.functional as F
 from tqdm import tqdm
-# from nlgeval import NLGEval
+from nlgeval import NLGEval
 # from sklearn.metrics import f1_score
 import torch.nn.modules
 import numpy as np
@@ -48,6 +49,8 @@ num_heads = 8
 max_len = 50
 max_tag_len = 20
 
+def _strip(s):
+    return s.strip()
 
 def tag_origin(tag):
     tag_ori = []
@@ -142,8 +145,8 @@ def evaluate(beam_size, fold_id, f, print_head=0):
         #     tags_yn_list[i][j] = tags_yn[0][j]
 
         # Encode
-        # encoder_out,h_c= encoder(image)  # (1, enc_image_size, enc_image_size, encoder_dim)
-        encoder_out,hc=encoder(image)
+        encoder_out,h_c= encoder(image)  # (1, enc_image_size, enc_image_size, encoder_dim)
+        # encoder_out,hc=encoder(image) # for base
         # enc_image_size = encoder_out.size(1)
         encoder_dim = encoder_out.size(-1)
 
@@ -199,7 +202,8 @@ def evaluate(beam_size, fold_id, f, print_head=0):
         # h=h.squeeze(0)
         # c=c.squeeze(0)
 
-        # h_t,c_t=h_c
+        # h_t=h_c
+        # c_t=h_c
         # h_t=h_t.squeeze(0)
         # c_t=c_t.squeeze(0)
 
@@ -239,7 +243,7 @@ def evaluate(beam_size, fold_id, f, print_head=0):
             # ctx2=decoder.attention(encoder_out,h2,h)
             # h3,c3=decoder.sent_lstm(torch.cat([ctx2,h2],dim=1),(h2,c2))
             # scores2=decoder.fc(h3)
-            ctx1, heads_weight_i1= decoder.attention(encoder_out,h1)
+            ctx1, heads_weight_single_i1, heads_weight_i1, _= decoder.attention(encoder_out,h1)
             if print_head==1 and i<5 and not heads_weight_i1.equal(cur_heads_weight):
                 # print("ctx1:", ctx1, end = ' ')
                 tmp_str += 'heads_weight_i1:'+str(heads_weight_i1)+'\n'
@@ -260,7 +264,7 @@ def evaluate(beam_size, fold_id, f, print_head=0):
                 scores=scores1
             else:
                 scores=scores1+lbda*scores2 
-            ctx2, heads_weight_i2=decoder.attention(encoder_out,h2)
+            ctx2, heads_weight_single_i2, heads_weight_i2, _=decoder.attention(encoder_out,h2)
             if print_head==1 and i<5 and not heads_weight_i2.equal(cur_heads_weight):
                 # print("ctx2:", ctx2, end = ' ')
                 tmp_str += 'heads_weight_i2:'+str(heads_weight_i2)+'\n'
@@ -337,16 +341,16 @@ def evaluate(beam_size, fold_id, f, print_head=0):
         seq = complete_seqs[i]
 
         # References
-        img_caps = allcaps[0].tolist()
-        img_captions = list(
-            map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
-                img_caps))  # remove <start> and pads
+        # img_caps = allcaps[0].tolist()
+        # img_captions = list(
+        #     map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
+        #         img_caps))  # remove <start> and pads
         
-        references.append(img_captions)
-        #print(references)
+        # references.append(img_captions)
+        # print(references)
 
         # Hypotheses
-        hypotheses.append([w for w in seq if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}])
+        # hypotheses.append([w for w in seq if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}])
         img_caps = allcaps[0].tolist()
         img_caps = caps.tolist()
         # if len(img_caps) > 50:
@@ -365,24 +369,34 @@ def evaluate(beam_size, fold_id, f, print_head=0):
         # print(hypothesis)
         #print(hypothesis)
         hypotheses.append(hypothesis)
+        # print("reference:", img_caps)
+        # print("hypothesis:", hypothesis)
+        # print("references:", references)
+        # print("hypotheses:", hypotheses)
+        # input()
         #print(hypotheses)
         assert len(references) == len(hypotheses)
+        # print("refs:", references)
+        # print("refs zip:", list(zip(*references)))
+        # print("refs zip list:", [list(map(_strip, refs)) for refs in zip(*references)])
+        # input()
 
     # print("train_data len:", loader.__len__())
     # print("long cap num:", test_set.long_cap_num)
     # input("Please press the enter to proceed")
-    print(hypotheses)
-    print(references)
+    # print(hypotheses.shape)
+    # print(references.shape)
+    # input()
 
     if print_head and f is not None:
         f.write(tmp_str)
-    # metrics_dict = {}
-    # try:
-    #     metrics_dict = nlgeval.compute_metrics(references, hypotheses)
-    #     for key in metrics_dict.keys():
-    #         metrics_dict[key] = float(format(metrics_dict[key], '.5f'))
-    # except:
-    #     pass
+    metrics_dict = {}
+    try:
+        metrics_dict = nlgeval.compute_metrics(references, hypotheses)
+        for key in metrics_dict.keys():
+            metrics_dict[key] = float(format(metrics_dict[key], '.5f'))
+    except Exception as e:
+        print(e.args)
     assert len(num_heads_weights) == len(heads_weight_list)
     # heads_weight_sum = torch.zeros(num_heads)
     # for i in range(len(num_heads_weights)):
@@ -433,14 +447,13 @@ if __name__ == '__main__':
     # best_b2s = []
     # best_b3s = []
     # best_b4s = []
-    # best_ms = []
     # best_rs = []
     # best_cs = []
     # best_epochs = []
     # best_bss = [] # beam size
     # with open('./10fold_result.txt', 'a') as f:
-    with open('./10fold_result.txt', 'a') as f:
-        for fold in range(1):
+    with open('./result.txt', 'a') as f:
+        for fold in range(4, 5):
             # if fold not in [8]:
             #     continue
             print("fold =", fold)
@@ -448,26 +461,23 @@ if __name__ == '__main__':
             best_b2 = 0
             best_b3 = 0
             best_b4 = 0
-            best_m = 0
             best_r = 0
             best_c = 0
             best_epoch = 0
             best_bs = 0
-            dict_str = '\nfold'+str(fold)+'\n'
+            dict_str = 'fold' + str(fold) + '\n'
             f.write(dict_str)
-            dict_str = ''
             epoch = 0
-            while epoch < 5:
+            while epoch < 1:
+                dict_str += 'Epoch='+str(epoch)+':\n' # for all data
                 try:
-                    print_head = 1
+                    print_head = 0
                     # Load model
                     print("Epoch =", epoch)
-                    checkpoint='./checkpoint/' + 'fold' + str(fold) + '_' + str(epoch) + '_vit_selfatt_checkpoint_' + data_name + '.pth.tar'
-                    # checkpoint='./checkpoint/' + str(epoch) + '_BEST_vit_selfatt_dwt_3&3_186_checkpoint_' + data_name + '.pth.tar'
-                    # try:
+                    checkpoint='./checkpoint_ok/' + 'fold' + str(fold) + '_' + str(epoch) + sys.argv[1] + '_checkpoint_' + data_name + '.pth.tar'
+                    print(checkpoint)
                     checkpoint = torch.load(checkpoint,map_location = device)
                 except Exception as e:
-                    # dict_str = ''
                     print(e.args)
                     epoch += 1
                     continue
@@ -478,9 +488,9 @@ if __name__ == '__main__':
                 encoder = checkpoint['encoder']
                 encoder = encoder.to(device)
                 encoder.eval()
-                dict_str += 'Epoch='+str(epoch)+':\n'
 
-                # nlgeval=NLGEval()
+                # nlgeval=NLGEval(metrics_to_omit=['SkipThoughtCS', 'EmbeddingAverageCosineSimilarity', 'VectorExtremaCosineSimilarity', 'GreedyMatchingScore', 'METEOR'])
+                nlgeval=NLGEval()
 
                 # Load word map (word2ix)
                 with open(word_map_file, 'r') as j:
@@ -495,13 +505,14 @@ if __name__ == '__main__':
                 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                 std=[0.229, 0.224, 0.225])
                 
-                for beam_size in range(1, 6):
+                for beam_size in range(1, 2):
                     print('beamsize={bs}:'.format(bs=beam_size))
                     metrics_dict, heads_weight = evaluate(beam_size, fold, f, print_head=print_head)
                     if print_head:
                         print_head = 0
                     print(heads_weight)
-                    dict_str += 'beamsize='+str(beam_size)+':\n'+str(metrics_dict)+'\n'
+                    print(metrics_dict)
+                    dict_str += 'beamsize='+str(beam_size)+':\n'+str(metrics_dict)+'\n' # for all data
                     if metrics_dict:
                         if metrics_dict['Bleu_1'] > best_b1:
                             best_b1 = metrics_dict['Bleu_1']
@@ -513,8 +524,6 @@ if __name__ == '__main__':
                             best_b4 = metrics_dict['Bleu_4']
                             best_epoch = epoch
                             best_bs = beam_size
-                        if metrics_dict['METEOR'] > best_m:
-                            best_m = metrics_dict['METEOR']
                         if metrics_dict['ROUGE_L'] > best_r:
                             best_r = metrics_dict['ROUGE_L']
                         if metrics_dict['CIDEr'] > best_c:
@@ -522,38 +531,12 @@ if __name__ == '__main__':
                         print(metrics_dict)
 
                 print()
-                dict_str += '\n'
-                f.write(dict_str)
-                dict_str = ''
+                dict_str += '\n'  # for all data
+                f.write(dict_str) # for all data
+                dict_str = ''     # for all data
                 epoch += 1
             
-            print('b1:', best_b1, 'b2:', best_b2, 'b3:', best_b3, 'b4:', best_b4, 'm:', best_m, 'r:', best_r, 'c:', best_c)
-            dict_str = str(best_b1)+' '+str(best_b2)+' '+str(best_b3)+' '+str(best_b4)+' '+str(best_m)+' '+str(best_r)+' '+str(best_c)+'\n\n'
-            # best_b1s.append(best_b1)
-            # best_b2s.append(best_b2)
-            # best_b3s.append(best_b3)
-            # best_b4s.append(best_b4)
-            # best_ms.append(best_m)
-            # best_rs.append(best_r)
-            # best_cs.append(best_c)
-            # best_epochs.append(best_epoch)
-            # best_bss.append(best_bs)
-            f.write(dict_str)
-            dict_str = ''
-        # print('Metrics\tMax\tMin\tAvg\tfold\tepoch\tbeam size')
-        # print('B1\t{max_}\t{min_}\t{avg_.5f}\t{fold}'.format(max_=max(best_b1s), min_=min(best_b1s),
-        #     avg_=sum(best_b1s)/len(best_b1s), fold=best_b1s.index(max(best_b1s))))
-        # print('B2\t{max_}\t{min_}\t{avg_.5f}\t{fold}'.format(max_=max(best_b2s), min_=min(best_b2s),
-        #     avg_=sum(best_b2s)/len(best_b2s), fold=best_b2s.index(max(best_b2s))))
-        # print('B3\t{max_}\t{min_}\t{avg_.5f}\t{fold}'.format(max_=max(best_b3s), min_=min(best_b3s),
-        #     avg_=sum(best_b3s)/len(best_b3s), fold=best_b3s.index(max(best_b3s))))
-        # print('B4\t{max_}\t{min_}\t{avg_.5f}\t{fold}\t{epoch}\t{bs}'.format(max_=max(best_b4s), min_=min(best_b4s),
-        #     avg_=sum(best_b4s)/len(best_b4s), fold=best_b4s.index(max(best_b4s)), epoch=best_epochs[best_b4s.index(max(best_b4s))],
-        #     bs=best_bss[best_b4s.index(max(best_b4s))]))
-        # print('M\t{max_}\t{min_}\t{avg_.5f}\t{fold}'.format(max_=max(best_ms), min_=min(best_ms),
-        #     avg_=sum(best_ms)/len(best_ms), fold=best_ms.index(max(best_ms))))
-        # print('R\t{max_}\t{min_}\t{avg_.5f}\t{fold}'.format(max_=max(best_rs), min_=min(best_rs),
-        #     avg_=sum(best_rs)/len(best_rs), fold=best_rs.index(max(best_rs))))
-        # print('C\t{max_}\t{min_}\t{avg_.5f}\t{fold}'.format(max_=max(best_cs), min_=min(best_cs),
-        #     avg_=sum(best_cs)/len(best_cs), fold=best_cs.index(max(best_cs))))
-        
+            if best_b1 != 0:
+                print('b1:', best_b1, 'b2:', best_b2, 'b3:', best_b3, 'b4:', best_b4, 'm:', 'r:', best_r, 'c:', best_c)
+                dict_str = str(best_b1)+' '+str(best_b2)+' '+str(best_b3)+' '+str(best_b4)+' '+' '+str(best_r)+' '+str(best_c)+'\n\n'
+                f.write(dict_str)

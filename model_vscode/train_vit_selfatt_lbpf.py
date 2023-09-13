@@ -12,7 +12,7 @@ from model_vit_selfatt_lbpf import Encoder, DecoderWithAttention
 from datasets import *
 from new_utils import *
 from nltk.translate.bleu_score import corpus_bleu
-import torchmetrics
+# import torchmetrics
 # Data parameters
 data_folder = './iu_10fold'  # folder with data files saved by create_input_files.py
 # data_folder = './my_iu'  # folder with data files saved by create_input_files.py
@@ -20,7 +20,6 @@ data_folder = './iu_10fold'  # folder with data files saved by create_input_file
 # data_folder = '../iu_output_file_freq_5_224'  # folder with data files saved by create_input_files.py
 # data_name = 'coco_1_cap_per_img_5_min_word_freq'  # base name shared by data files
 data_name = 'iu'
-model = '_vit_selfatt1_'
 
 # Model parameters 
 emb_dim = 512  # dimension of word embeddings
@@ -29,6 +28,7 @@ encoder_dim = 512
 decoder_dim = 512  # dimension of decoder RNN
 need_heads_weight=2 # 0:no head weight 1:single weight 2:double weight
 need_tags_supervise=True
+model = '_vit_selfatt_new_0.1dw_'
 # dropout_name = '3&3'
 max_len = 50
 max_tag_len=20
@@ -72,6 +72,7 @@ def main():
         tag_map=json.load(j)
     rev_tag_map = {v: k for k, v in tag_map.items()} #213, dict{No.:word}
     # print(rev_tag_map[1])
+
     # Loss function
     criterion = nn.CrossEntropyLoss().to(device)
     criterion1= nn.MultiLabelSoftMarginLoss().to(device)
@@ -79,10 +80,7 @@ def main():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
     train_set = []
-    for i in range(10):
-        if i not in [0,6,8]:
-            continue
-        
+    for i in range(6, 10):
         epochs_since_improvement = 0
         train_set.clear()
         # Initialize / load checkpoint
@@ -274,7 +272,7 @@ def train(train_loader, encoder, decoder, criterion,criterion1, encoder_optimize
         # taglen=taglen.to(device)
         # Forward prop.
         imgs, hc = encoder(imgs)
-        scores,scores1,caps_sorted, decode_lengths, alphas, sort_ind, tag_pred_out, heads_weight_i = decoder(imgs, caps, caplens,tags_yn,rev_tag_map,tag_map,hc)
+        scores,scores1,caps_sorted, decode_lengths, alphas, sort_ind, tag_pred_out, heads_weight_single_i, heads_weight_i, penalty_i = decoder(imgs, caps, caplens,tags_yn,rev_tag_map,tag_map,hc)
 
         #tag_att if (heads_weight_i_pre == None or heads_weight_t_pre == None) or (not heads_weight_i.equal(heads_weight_i_pre) or not heads_weight_t.equal(heads_weight_t_pre)):
         # if need_heads_weight and (heads_weight_i_pre == None or not heads_weight_i.equal(heads_weight_i_pre)):
@@ -282,6 +280,11 @@ def train(train_loader, encoder, decoder, criterion,criterion1, encoder_optimize
         #     #tag_att print(f'        -heads_weight_t:{heads_weight_t}')
         #     heads_weight_i_pre = heads_weight_i
         #     #tag_att heads_weight_t_pre = heads_weight_t
+
+        # if heads_weight_i is not None:
+        #     print(f'batch{i}-penalty_i:{penalty_i}')
+        #     print(f'        -heads_weight_single_i:{heads_weight_single_i}')
+        #     print(f'        -heads_weight_i:{heads_weight_i}')
 
         scores_copy=scores
         # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
@@ -408,7 +411,7 @@ def validate(val_loader, encoder, decoder, criterion,criterion1):
             if encoder is not None:
                 imgs, hc = encoder(imgs)
 
-            scores, scores1, caps_sorted, decode_lengths, alphas, sort_ind, tag_pred_out, _ = decoder(imgs, caps, caplens, tags_yn, rev_tag_map,tag_map,hc)
+            scores, scores1, caps_sorted, decode_lengths, alphas, sort_ind, tag_pred_out, _, _, _ = decoder(imgs, caps, caplens, tags_yn, rev_tag_map,tag_map,hc)
 
             word_len=scores.size(1)
             scores_copy = scores.clone()
