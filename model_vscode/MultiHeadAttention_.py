@@ -469,8 +469,6 @@ def multi_head_attention_forward_(query,                          # type: Tensor
 
         ##########Code for Penalty##########
         # print("need heads weight:", need_heads_weight)
-        # if heads_weight is not None:
-        ##heads_weight_list = []
         penalty = torch.zeros(num_heads).to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         cos_base = heads_weight.argmax().item()
         # print(cos_base.item())
@@ -480,15 +478,7 @@ def multi_head_attention_forward_(query,                          # type: Tensor
             attn_output_slid = attn_output[i*num_heads:(i+1)*num_heads]
             # print("attn_output_slid shape:", attn_output_slid.size())
             penalty += torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
-            # print("cos_similarity: ", torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid))
-            ##penalty = torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
-            # print("penalty:", penalty)
-            # print("heads_weight*(2-penalty):", heads_weight * (2.0-penalty))
-            # print("heads weight after softmax:", nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
-            # input("Please press enter to proceed")
-            ##heads_weight_list.append(nn.functional.softmax(heads_weight * (2.0-penalty))*num_heads)
         
-        # print("bsz:", bsz, ", penalty:", penalty)
         penalty /= num_heads
         # print("penalty:", penalty)
         # penalty = penalty.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
@@ -496,7 +486,6 @@ def multi_head_attention_forward_(query,                          # type: Tensor
         # print("heads_weight_single in MultiHeadAttention_: ", heads_weight_single)
         heads_weight = heads_weight * (2.0-penalty)
         # print("heads_weight in MultiHeadAttention_: ", heads_weight)
-        ##heads_weight = torch.cat(tuple(heads_weight_list), dim=0).reshape(-1, 1)
         ##########Code for Penalty##########
 
         heads_weight = heads_weight.reshape(-1, 1).repeat(bsz, 1)
@@ -509,7 +498,7 @@ def multi_head_attention_forward_(query,                          # type: Tensor
     attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
     attn_output = F.linear(attn_output, out_proj_weight, out_proj_bias)
 
-    if need_weights:
+    if need_weights: # need_weights indicates whether to return the weight of q*k (attn_output_weights)，not double-weights we designed. We set it False here.
         # average attention weights over heads
         attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
         if heads_weight is not None:
