@@ -9,7 +9,7 @@ Train model:
 Test model:
 run eval_vit_selfatt_lbpf_.py
 ```
-python /model_vscode/eval_vit_selfatt_lbpf_.py model(the model name you defined in train)
+python /model_vscode/eval_vit_selfatt_lbpf_.py model_name_you_defined_in_train
 ```
 
 TODO: Upload dataset
