@@ -1,1 +1,10 @@
 model_vscode/iu_10fold/[0-8]*.hdf5 !text !filter !merge !diff
+model_vscode/iu_10fold/0*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/1*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/2*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/3*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/4*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/5*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/6*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/7*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/8*.hdf5 filter=lfs diff=lfs merge=lfs -text
