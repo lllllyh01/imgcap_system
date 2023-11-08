@@ -1,1 +1,1 @@
-model_vscode/*_10fold/*.hdf5 filter=lfs diff=lfs merge=lfs -text
+model_vscode/iu_10fold/[0-8]*.hdf5 !text !filter !merge !diff
