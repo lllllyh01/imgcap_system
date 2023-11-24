@@ -464,10 +464,12 @@ def multi_head_attention_forward_(query,                          # type: Tensor
     attn_output = torch.bmm(attn_output_weights, v)
     assert list(attn_output.size()) == [bsz * num_heads, tgt_len, head_dim]
     heads_weight_single = None
+    
+    ##########Double Weight##########
     if heads_weight is not None:
         attn_output = attn_output.reshape(bsz * num_heads, -1)
 
-        ##########Code for Penalty##########
+        ##########Second Weight##########
         # print("need heads weight:", need_heads_weight)
         penalty = torch.zeros(num_heads).to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         cos_base = heads_weight.argmax().item()
@@ -478,15 +480,16 @@ def multi_head_attention_forward_(query,                          # type: Tensor
             attn_output_slid = attn_output[i*num_heads:(i+1)*num_heads]
             # print("attn_output_slid shape:", attn_output_slid.size())
             penalty += torch.cosine_similarity(attn_output_slid[cos_base].unsqueeze(0), attn_output_slid)
+        ##########Second Weight##########
         
         penalty /= num_heads
         # print("penalty:", penalty)
         # penalty = penalty.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         heads_weight_single = heads_weight[:]
         # print("heads_weight_single in MultiHeadAttention_: ", heads_weight_single)
-        heads_weight = heads_weight * (2.0-penalty)
+        heads_weight = heads_weight * (2.0-penalty) # first_weight*second_weight
         # print("heads_weight in MultiHeadAttention_: ", heads_weight)
-        ##########Code for Penalty##########
+        ##########Second Weight##########
 
         heads_weight = heads_weight.reshape(-1, 1).repeat(bsz, 1)
         assert attn_output.size(0) == heads_weight.size(0)
@@ -494,6 +497,7 @@ def multi_head_attention_forward_(query,                          # type: Tensor
         attn_output = torch.mul(attn_output, heads_weight)
         attn_output = attn_output.reshape(bsz * num_heads, tgt_len, -1)
         assert attn_output.size(2) == head_dim
+    ##########Double Weight##########
 
     attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
     attn_output = F.linear(attn_output, out_proj_weight, out_proj_bias)
